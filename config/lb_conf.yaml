@@ -1,0 +1,13 @@
+---
+# Port on which to listen for incoming requests
+listening-port: 9700
+
+# Destination hosts to connect to
+hosts:
+    - host1
+    - host2
+    - host3
+
+# Env level for logging. Choice of test/stage/prod.
+env: test
+...

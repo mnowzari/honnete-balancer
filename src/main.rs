@@ -1,56 +1,43 @@
-use std::{
-    error::Error, fs, io::{prelude::*, BufReader}, net::{TcpListener, TcpStream}, thread, time::Duration
-};
+use std::{error::Error, sync::{Arc, Mutex}};
+
+use env::Environment;
+use queue::Queue;
+use clap::Parser;
 
 mod threadpool;
+mod queue;
+mod connections;
+mod listener;
+mod handler;
+mod env;
 
 
-fn handle_connection(mut stream: TcpStream) {
-    let buf_reader = BufReader::new(&mut stream);
-    let request_line = buf_reader
-        .lines()
-        .next()
-        .unwrap()
-        .unwrap();
-
-    println!("{}", request_line);
-
-    let status_line = match &request_line[..] {
-        "GET / HTTP/1.1" => "HTTP/1.1 200 OK",
-
-        "GET /request HTTP/1.1" => "HTTP/1.1 201 OK",
-
-        "GET /sleep HTTP/1.1" => {
-            thread::sleep(Duration::from_secs(5));
-            "HTTP/1.1 200 OK"
-        }
-
-        _ => "HTTP/1.1 404 NOT FOUND",
-    };
-
-    // let contents = fs::read_to_string(filename).unwrap();
-    let contents: String = String::from("CONTENT");
-    let length = contents.len();
-
-    let response =
-        format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
-
-    stream.write_all(response.as_bytes()).unwrap();
+#[derive(Parser)]
+#[command(
+    version,
+    about,
+    long_about = None,
+    propagate_version = true
+)]
+pub struct InputArguments {
+    #[arg(long, required = true)]
+    pub conf: Option<String>,
 }
 
-fn listen_for_requests() {
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let pool = threadpool::ThreadPool::new(8).unwrap();
+fn main() -> Result<(), Box<dyn Error>>{
+    // get cli arguments
+    let args = InputArguments::parse();
 
-    for stream in listener.incoming() {
-        let stream = stream.unwrap();
+    // init env and logging and read in config settings
+    let environ: Environment = Environment::init_env(args.conf.unwrap())?;
 
-        pool.execute(|| {
-            handle_connection(stream);
-        });
-    }
-}
+    // init in-memory requests queue
+    let request_queue = Arc::new(Mutex::new(Queue::new()?));
 
-fn main() {
-    listen_for_requests();
+    // init listener 
+    listener::listen_for_requests(&request_queue);
+
+    // init connections
+
+    Ok(())
 }
