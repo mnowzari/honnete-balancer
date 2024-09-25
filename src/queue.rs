@@ -1,14 +1,15 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    sync::{Arc, Mutex}
+};
 
 pub struct Queue {
     pub requests_queue: Vec<String>
 }
 
 impl Queue {
-    pub fn new() -> Result<Queue, Box<dyn Error>> {
-        Ok(Queue {
-            requests_queue: vec![],
-        })
+    pub fn new() -> Result<Arc<Mutex<Queue>>, Box<dyn Error>> {
+        Ok(Arc::new(Mutex::new(Queue {requests_queue: vec![]})))
     }
 
     pub fn enqueue(&mut self, value: String) {
@@ -33,13 +34,13 @@ mod tests {
         let mut q = Queue::new()
             .unwrap();
 
-        q.enqueue(String::from("5"));
-        q.enqueue(String::from("7"));
-        q.enqueue(String::from("9"));
+        q.lock().unwrap().enqueue(String::from("5"));
+        q.lock().unwrap().enqueue(String::from("7"));
+        q.lock().unwrap().enqueue(String::from("9"));
             
-        assert_eq!(q.next(), Some("5".to_string()));
-        assert_eq!(q.next(), Some("7".to_string()));
-        assert_eq!(q.next(), Some("9".to_string()));
-        assert_eq!(q.next(), None);
+        assert_eq!(q.lock().unwrap().next(), Some("5".to_string()));
+        assert_eq!(q.lock().unwrap().next(), Some("7".to_string()));
+        assert_eq!(q.lock().unwrap().next(), Some("9".to_string()));
+        assert_eq!(q.lock().unwrap().next(), None);
     }
 }

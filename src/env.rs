@@ -21,13 +21,13 @@ impl fmt::Display for EnvLogLevel {
 }
 
 pub struct Environment {
-    listening_port: String,
-    hosts: Vec<String>,
-    env_level: EnvLogLevel,
+    pub listening_port: String,
+    pub hosts: Vec<String>,
+    pub env_level: EnvLogLevel,
 }
 
 impl Environment {
-    pub fn init_env(path_to_conf_yaml: String) -> Result<Self, Box<dyn Error>> {
+    pub fn init_env(path_to_conf_yaml: String) -> Result<Environment, Box<dyn Error>> {
         match read_yaml_file(path_to_conf_yaml) {
             Some(y) => {
                 let conf_details: (String, Vec<String>, EnvLogLevel) = read_config(&y)?;
@@ -63,7 +63,7 @@ pub fn read_config(yaml_string: &String) -> Result<(String, Vec<String>, EnvLogL
 
     let hosts_yaml: Vec<yaml_rust::Yaml> = yaml_obj["hosts"]
         .as_vec()
-        .expect("\nError reading the hosts!\n")
+        .expect("\nError reading the hosts! Make sure hosts have been specified in your YAML file.\n")
         .clone();
     // convert Vec<Yaml> to Vec<String>
     let mut hosts: Vec<String> = vec![];
@@ -89,7 +89,7 @@ pub fn read_config(yaml_string: &String) -> Result<(String, Vec<String>, EnvLogL
 
 fn print_details(env_details: &(String, Vec<String>, EnvLogLevel)) {
     println!(
-        "Listening on port {}\nConnecting to hosts {:?}\nEnvironment level {}",
+        "Listening on port {}\nHosts to balance {:?}\nEnvironment level {}",
         env_details.0,
         env_details.1,
         env_details.2,
