@@ -1,17 +1,20 @@
 mod threadpool;
 mod queue;
-mod connections;
+mod client;
 mod listener;
-mod handler;
+mod balancer;
 mod env;
 
 use std::{
-    error::Error,
-    sync::{Arc, Mutex}
+    error::Error, sync::{Arc, Mutex}
 };
+
+use futures::executor::block_on;
 
 use env::Environment;
 use queue::Queue;
+use client::Client;
+
 use clap::Parser;
 
 
@@ -36,14 +39,14 @@ fn main() -> Result<(), Box<dyn Error>>{
     let environ: Environment = Environment::init_env(args.conf.unwrap())?;
     // init in-memory requests queue
     let request_queue: Arc<Mutex<Queue>> = Queue::new()?;
-    // init connections to hosts
-
-
+    // init client instance
+    let mut client_instance: Client = Client::init_client(&environ.hosts)?;
+    client_instance.health_check();
     // init listener 
-    listener::listen_for_requests(
-        &request_queue,
-        &environ.listening_port
-    );
+    let listener_future = listener::init_listeners(&request_queue, &environ.listening_port);
 
+    // init request balancer
+
+    block_on(listener_future);
     Ok(())
 }

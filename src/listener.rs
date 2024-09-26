@@ -1,5 +1,5 @@
 use std::{
-    io::{BufRead,BufReader},
+    io::{BufReader, BufRead, Write},
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex}
 };
@@ -22,7 +22,9 @@ fn validate_request_line(request: String) -> Option<String> {
     // } else {
     //     None
     // }
+    
     Some(request)
+    // None
 }
 
 pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>) {
@@ -35,26 +37,41 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
     
     match validate_request_line(request_line) {
         Some(r) => {
-            // println!("{}", r);
+            println!("{}", r);
             request_queue
                 .lock()
                 .unwrap()
                 .enqueue(r);
         },
-        None => {},
+        None => {
+            // send 404 if incoming request is not valid
+            let contents: String = String::from("Request is invalid!");
+            let length: usize = contents.len();
+
+            let response: String =
+                format!("HTTP/1.1 404 NOT FOUND\r\nContent-Length: {length}\r\n\r\n{contents}");
+
+            stream.write_all(response.as_bytes()).unwrap();
+        },
     }
 }
 
-pub fn listen_for_requests(request_queue: &Arc<Mutex<Queue>>, port: &String) {
+fn listener(request_queue: Arc<Mutex<Queue>>, port: String) {
     let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", port))
         .expect("Error initializing TcpListener!");
-    let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
 
     for stream in listener.incoming() {
-
-        let request_queue_arcref = request_queue.clone();
-        pool.execute(move || {
-            enqueue_requests(stream.unwrap(), request_queue_arcref);
-        });
+        enqueue_requests(stream.unwrap(), request_queue.clone());
     }
+}
+
+pub async fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
+    let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
+
+    let rq_arc_ref: Arc<Mutex<Queue>> = request_queue.clone();
+    let port_number: String = port.clone();
+
+    pool.execute(move || {
+        listener(rq_arc_ref, port_number);
+    });
 }

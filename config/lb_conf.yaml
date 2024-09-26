@@ -2,11 +2,14 @@
 # Port on which to listen for incoming requests
 listening-port: 9700
 
-# Destination hosts to connect to
+# Destination hosts to connect to, in hostname:port format
 hosts:
-  - host1
-  - host2
-  - host3
+  - 127.0.0.1:8000
+  - 127.0.0.1:8000
+  - 127.0.0.1:7808
+  - 127.0.0.1:7808
+  - 127.0.0.1:8000
+  - 127.0.0.1:8000
 
 # Env level for logging. Choice of test/stage/prod.
 env: test

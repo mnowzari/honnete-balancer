@@ -31,14 +31,14 @@ impl Environment {
         match read_yaml_file(path_to_conf_yaml) {
             Some(y) => {
                 let conf_details: (String, Vec<String>, EnvLogLevel) = read_config(&y)?;
+                
                 print_details(&conf_details);
-                Ok(
-                    Environment {
+
+                Ok(Environment {
                         listening_port: conf_details.0,
                         hosts: conf_details.1,
                         env_level: conf_details.2,
-                    }
-                )
+                    })
             },
             None => {
                 panic!("Error while reading in YAML config file!");

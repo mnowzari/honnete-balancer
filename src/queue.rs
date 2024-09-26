@@ -31,7 +31,7 @@ mod tests {
 
     #[test]
     fn queue_test() {
-        let mut q = Queue::new()
+        let q = Queue::new()
             .unwrap();
 
         q.lock().unwrap().enqueue(String::from("5"));
