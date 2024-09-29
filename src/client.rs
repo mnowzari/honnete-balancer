@@ -1,9 +1,9 @@
 use core::fmt;
-use std::{error::Error, io::{Read, Write}, net::TcpStream};
+use std::{
+    error::Error,
+    net::{SocketAddr, TcpStream}
+};
 
-use clap::builder::Str;
-
-use crate::queue::Queue;
 
 #[derive(Debug)]
 pub enum HostHealth {
@@ -18,8 +18,21 @@ impl fmt::Display for HostHealth {
 }
 
 pub struct Host {
-    pub hostname: String,
+    pub hostname: SocketAddr,
     pub health: HostHealth,
+}
+
+impl Host {
+    pub fn health_check(&mut self) {
+        match TcpStream::connect(&self.hostname) {
+            Ok(_x) => {
+                self.health = HostHealth::Active;
+            },
+            Err(_x) => {
+                self.health = HostHealth::Inactive;
+            },
+        }
+    }
 }
 
 
@@ -29,44 +42,23 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn init_client(hosts: &Vec<String>) -> Result<Client, Box<dyn Error>> {
+    pub fn init_client(hosts: &Vec<SocketAddr>) -> Result<Client, Box<dyn Error>> {
         let mut host_objects: Vec<Host> = vec![];
         for host_name in hosts {
-            host_objects.push(
-                Host {
-                    hostname: host_name.clone(),
-                    health: HostHealth::Inactive // assume hosts are inactive until proven otherwise
-                });
+            let mut new_host_obj: Host = Host {
+                hostname: host_name.clone(),
+                health: HostHealth::Inactive
+            };
+            new_host_obj.health_check();
+            host_objects.push(new_host_obj);
         }
 
         Ok(Client {
                 hosts: host_objects,
             })
     }
-
-    pub fn health_check(&mut self) -> Result<(), Box<dyn Error>> {
-        // intermittent health check to make sure hosts are up
-        // println!("\nChecking health of hosts:\n");
-        for host in &mut self.hosts {
-            match TcpStream::connect(&host.hostname) {
-                Ok(x) => {
-                    host.health = HostHealth::Active;
-                    // println!("{}", &host.health);
-                },
-                Err(x) => {
-                    host.health = HostHealth::Inactive;
-                    // println!("{}", &host.health);
-                },
-            }
-        }
-        Ok(())
-    }
-
-    // pub fn round_robin(&self, Queue: Arc<Mutex<Queue>>) {
-
-    // }
 }
 
-fn print_init_details() {
+// fn print_init_details() {
 
-}
+// }

@@ -37,7 +37,9 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
     
     match validate_request_line(request_line) {
         Some(r) => {
+
             println!("{}", r);
+            
             request_queue
                 .lock()
                 .unwrap()

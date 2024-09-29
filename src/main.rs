@@ -41,12 +41,12 @@ fn main() -> Result<(), Box<dyn Error>>{
     let request_queue: Arc<Mutex<Queue>> = Queue::new()?;
     // init client instance
     let mut client_instance: Client = Client::init_client(&environ.hosts)?;
-    client_instance.health_check();
     // init listener 
     let listener_future = listener::init_listeners(&request_queue, &environ.listening_port);
 
     // init request balancer
 
+    println!("...listeners active!");
     block_on(listener_future);
     Ok(())
 }
