@@ -42,11 +42,16 @@ fn main() -> Result<(), Box<dyn Error>>{
     // init client instance
     let mut client_instance: Client = Client::init_client(&environ.hosts)?;
     // init listener 
-    let listener_future = listener::init_listeners(&request_queue, &environ.listening_port);
+    let listener_future = listener::init_listeners(
+        &request_queue,
+        &environ.listening_port
+    );
 
     // init request balancer
 
-    println!("...listeners active!");
+    println!("...listeners active!\n\nCtrl-C to terminate this process.");
     block_on(listener_future);
+
+    println!("{}", request_queue.lock().unwrap().len());
     Ok(())
 }

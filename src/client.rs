@@ -58,7 +58,3 @@ impl Client {
             })
     }
 }
-
-// fn print_init_details() {
-
-// }

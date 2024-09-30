@@ -1,32 +1,26 @@
 use std::{
-    io::{BufReader, BufRead, Write},
+    io::{BufRead, BufReader, Write},
     net::{TcpListener, TcpStream},
-    sync::{Arc, Mutex}
+    sync::{Arc, Mutex}, thread::Thread
 };
 
+use futures::executor::block_on;
 // use regex::Regex;
 use num_cpus;
 
 use crate::{
-    queue::Queue,
+    queue::{Queue, Request},
     threadpool::ThreadPool
 };
 
 
 fn validate_request_line(request: String) -> Option<String> {
-    // ensure http request is valid
-    // let re: Regex = Regex::new(r"")
-    //     .unwrap();
-    // if re.is_match(&request) {
-    //     Some(request)
-    // } else {
-    //     None
-    // }
-    
+    // ensure http request is valid...somehow
     Some(request)
     // None
 }
 
+// this thread will block until it receives a response
 pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>) {
     let buf_reader = BufReader::new(&mut stream);
     let request_line = buf_reader
@@ -37,13 +31,19 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
     
     match validate_request_line(request_line) {
         Some(r) => {
-
-            println!("{}", r);
             
+            let request_obj: Request = Request {
+                request_data: r.clone(),
+                stream, // we need to save this stream to write back the request result to it
+            };
+
+            println!("{}", &request_obj.request_data);
+
             request_queue
                 .lock()
                 .unwrap()
-                .enqueue(r);
+                .enqueue(request_obj);
+
         },
         None => {
             // send 404 if incoming request is not valid
@@ -58,22 +58,45 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
     }
 }
 
-fn listener(request_queue: Arc<Mutex<Queue>>, port: String) {
-    let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", port))
-        .expect("Error initializing TcpListener!");
+// ==============================================================================================================
+// not sure which 'model' to use below:
 
-    for stream in listener.incoming() {
-        enqueue_requests(stream.unwrap(), request_queue.clone());
+// this async function has a single TcpListener and kicks off
+// many enqueue_requests threads as they come into a single listener
+pub async fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
+    let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
+    
+    let listener: TcpListener = TcpListener::bind(format!("0.0.0.0:{}", port))
+        .expect("Error initializing TcpListener");
+
+    for stream in listener.incoming().take(10) {
+        let rq_arc_ref: Arc<Mutex<Queue>> = request_queue.clone();
+        pool.execute(move || {
+            enqueue_requests(stream.unwrap(), rq_arc_ref);
+        });
     }
 }
 
-pub async fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
-    let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
+// these two functions work by kicking off multiple TcpListener threads
+// so each thread has its own TcpListener on the specific port that will
+// have its own enqueue_requests() function:
 
-    let rq_arc_ref: Arc<Mutex<Queue>> = request_queue.clone();
-    let port_number: String = port.clone();
+// fn listener(request_queue: Arc<Mutex<Queue>>, port: String) {
+//     let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", port))
+//         .expect("Error initializing TcpListener!");
 
-    pool.execute(move || {
-        listener(rq_arc_ref, port_number);
-    });
-}
+//     for stream in listener.incoming() {
+//         enqueue_requests(stream.unwrap(), request_queue.clone());
+//     }
+// }
+
+// pub async fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
+//     let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
+
+//     let rq_arc_ref: Arc<Mutex<Queue>> = request_queue.clone();
+//     let port_number: String = port.clone();
+
+//     pool.execute(move || {
+//         listener(rq_arc_ref, port_number);
+//     });
+// }
