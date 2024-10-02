@@ -5,7 +5,6 @@ use std::{
 };
 
 use futures::executor::block_on;
-// use regex::Regex;
 use num_cpus;
 
 use crate::{
@@ -20,7 +19,10 @@ fn validate_request_line(request: String) -> Option<String> {
     // None
 }
 
-// this thread will block until it receives a response
+// Streams will stay open as long as they live in the queue
+// This makes sense because we want the stream to be alive
+// until it is taken care of and a response is written
+// back to it. The thread doesn't block, I don't think
 pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>) {
     let buf_reader = BufReader::new(&mut stream);
     let request_line = buf_reader
@@ -69,7 +71,7 @@ pub async fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
     let listener: TcpListener = TcpListener::bind(format!("0.0.0.0:{}", port))
         .expect("Error initializing TcpListener");
 
-    for stream in listener.incoming().take(10) {
+    for stream in listener.incoming() {
         let rq_arc_ref: Arc<Mutex<Queue>> = request_queue.clone();
         pool.execute(move || {
             enqueue_requests(stream.unwrap(), rq_arc_ref);

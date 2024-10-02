@@ -95,7 +95,7 @@ pub fn read_config(yaml_string: &String) -> Result<(String, Vec<SocketAddr>, Env
 
 fn print_details(env_details: &(String, Vec<SocketAddr>, EnvLogLevel)) {
     println!(
-        "Listening on port {}\nHosts to balance {:?}\nEnvironment level {}",
+        "Listening on port {}\nHosts to balance {:?}\nEnvironment level: {}",
         env_details.0,
         env_details.1,
         env_details.2,
