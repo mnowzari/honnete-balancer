@@ -63,9 +63,9 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
 // ==============================================================================================================
 // not sure which 'model' to use below:
 
-// this async function has a single TcpListener and kicks off
+// this function has a single TcpListener and kicks off
 // many enqueue_requests threads as they come into a single listener
-pub async fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
+pub fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
     let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
     
     let listener: TcpListener = TcpListener::bind(format!("0.0.0.0:{}", port))

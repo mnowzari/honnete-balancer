@@ -16,6 +16,7 @@ use queue::Queue;
 use client::Client;
 
 use clap::Parser;
+use threadpool::ThreadPool;
 
 
 #[derive(Parser)]
@@ -41,17 +42,26 @@ fn main() -> Result<(), Box<dyn Error>>{
     let request_queue: Arc<Mutex<Queue>> = Queue::new()?;
     // init client instance
     let mut client_instance: Client = Client::init_client(&environ.hosts)?;
-    // init listener 
-    let listener_future = listener::init_listeners(
-        &request_queue,
-        &environ.listening_port
-    );
 
-    // init request balancer
+    // initialize two threads, one for the listener and one for the balancer
+    let main_thread_pool: ThreadPool = ThreadPool::new(2).unwrap();
+
+    let req_q_arc = request_queue.clone();
+    main_thread_pool.execute(move || {
+        listener::init_listeners(
+            &req_q_arc,
+            &environ.listening_port
+        );
+    });
+
+    let req_q_arc_two = request_queue.clone();
+    main_thread_pool.execute(move || {
+        balancer::test_balance(
+            &req_q_arc_two,
+            &mut client_instance
+        );
+    });
 
     println!("...listeners active!\n\nCtrl-C to terminate this process.");
-    block_on(listener_future);
-
-    println!("{}", request_queue.lock().unwrap().len());
     Ok(())
 }
