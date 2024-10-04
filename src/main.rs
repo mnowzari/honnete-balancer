@@ -3,6 +3,7 @@ mod queue;
 mod client;
 mod listener;
 mod balancer;
+mod logging;
 mod env;
 
 use std::{

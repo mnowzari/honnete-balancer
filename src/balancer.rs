@@ -10,6 +10,7 @@ use crate::{
 };
 
 const THREAD_SLEEP_MILLIS: u64 = 2;
+const TCP_STREAM_TIMEOUT: u64 = 60;
 
 fn test_handler(request_object: &mut Request, _host: &Host) {
 
@@ -60,25 +61,34 @@ fn get_request_content(stream: TcpStream) -> Result<String, Box<dyn Error>>{
 fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error>> {
     println!("In handler()");
     // connect to farside host
-    let mut farside_stream: TcpStream = TcpStream::connect_timeout(&host.hostname, Duration::from_secs(30))?;
-    println!("Connected to farside host");
+    let mut upstream_connection: Result<TcpStream, std::io::Error> = TcpStream::connect_timeout(
+        &host.hostname,
+        Duration::from_secs(TCP_STREAM_TIMEOUT));
+    
+    match upstream_connection {
+        Ok(mut upstream) => {
+            println!("Connected to farside host");
 
-    // write request
-    println!("Writing this request: {}", &request_object.request_data);
-    farside_stream.write_all(&request_object.request_data.as_bytes())?;
-    println!("Wrote to farside host");
-
-    // get response and content from farside stream
-    let content: String = get_request_content(farside_stream)?;
-
-    println!("Farside content: {:?}", content);
-    // write farside response to nearside stream
-    request_object.stream.write_all(&content.as_bytes())?;
-    println!("Wrote to nearside request stream");
+            // write request
+            println!("Writing this request: {}", &request_object.request_data);
+            upstream.write_all(&request_object.request_data.as_bytes())?;
+            println!("Wrote to farside host");
+        
+            // get response and content from farside stream
+            let content: String = get_request_content(upstream)?;
+        
+            println!("Farside content: {:?}", content);
+            // write farside response to nearside stream
+            request_object.stream.write_all(&content.as_bytes())?;
+            println!("Wrote to nearside request stream");
+        },
+        Err(x) => {},
+    }
     Ok(())
 }
 
 fn get_next_active_host(current_host_idx: &mut usize, client: &mut Client) -> Option<Host> {
+    // println!("Getting next active host");
     // first, update our idx counter and grab the host at this idx
     *current_host_idx = (*current_host_idx + 1) % client.hosts.len();
     let mut selected_host: Host = client.hosts[*current_host_idx].clone();

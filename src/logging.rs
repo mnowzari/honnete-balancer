@@ -1,0 +1,7 @@
+struct LogHandler {
+
+}
+
+impl LogHandler {
+
+}

@@ -29,7 +29,7 @@ impl Queue {
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub fn _len(&self) -> usize {
         self.requests_queue.len()
     }
 }
