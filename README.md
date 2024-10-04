@@ -1,6 +1,7 @@
 # Honnete
-### Simple load balancer written in Rust. 
-#### Under Construction! Not currently working (yet!)
+### Simple load balancer written in Rust.
+
+Honnete is a (very) simple asynchronous load balancer. For now, it only provides round-robin balancing of incoming requests.
 
 Honnete requires a YAML config file to run.
 The basic YAML configuration requires three items. You can use the provided YAML under the config/ directory as a template. 

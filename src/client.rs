@@ -5,7 +5,7 @@ use std::{
 };
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum HostHealth {
     Active,
     Inactive,

@@ -23,22 +23,27 @@ fn validate_request_line(request: String) -> Option<String> {
 // until it is taken care of and a response is written
 // back to it. The thread doesn't block, I don't think
 pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>) {
-    let buf_reader = BufReader::new(&mut stream);
-    let request_line = buf_reader
+    let buf_reader: BufReader<&mut TcpStream> = BufReader::new(&mut stream);
+    let request_line: String = buf_reader
         .lines()
         .next()
         .unwrap()
         .unwrap();
-    
+
     match validate_request_line(request_line) {
         Some(r) => {
+
+            let contents: String = String::from("");
+            let length: usize = r.len();
+            let request_to_send: String =
+                format!("{}\r\nContent-Length: {length}\r\n\r\n{contents}", &r);
             
+            println!("\n=== Incoming request: {}", &request_to_send);
+
             let request_obj: Request = Request {
-                request_data: r.clone(),
+                request_data: request_to_send,
                 stream, // we need to save this stream to write back the request result to it
             };
-
-            // println!("{}", &request_obj.request_data);
 
             request_queue
                 .lock()

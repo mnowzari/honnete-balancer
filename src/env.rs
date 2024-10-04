@@ -24,7 +24,7 @@ impl fmt::Display for EnvLogLevel {
 pub struct Environment {
     pub listening_port: String,
     pub hosts: Vec<SocketAddr>,
-    pub env_level: EnvLogLevel,
+    pub env_level: EnvLogLevel, // for logging
 }
 
 impl Environment {

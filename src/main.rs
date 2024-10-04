@@ -9,8 +9,6 @@ use std::{
     error::Error, sync::{Arc, Mutex}
 };
 
-use futures::executor::block_on;
-
 use env::Environment;
 use queue::Queue;
 use client::Client;
@@ -56,10 +54,7 @@ fn main() -> Result<(), Box<dyn Error>>{
 
     let req_q_arc_two = request_queue.clone();
     main_thread_pool.execute(move || {
-        balancer::load_balancer(
-            &req_q_arc_two,
-            &mut client_instance
-        );
+        balancer::lb_round_robin(&req_q_arc_two, &mut client_instance);
     });
 
     println!("...listeners active!\n\nCtrl-C to terminate this process.");
