@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>>{
 
     let req_q_arc_two = request_queue.clone();
     main_thread_pool.execute(move || {
-        balancer::test_balance(
+        balancer::load_balancer(
             &req_q_arc_two,
             &mut client_instance
         );

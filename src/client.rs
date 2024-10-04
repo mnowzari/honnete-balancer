@@ -5,7 +5,7 @@ use std::{
 };
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HostHealth {
     Active,
     Inactive,
@@ -17,6 +17,7 @@ impl fmt::Display for HostHealth {
     }
 }
 
+#[derive(Clone)]
 pub struct Host {
     pub hostname: SocketAddr,
     pub health: HostHealth,

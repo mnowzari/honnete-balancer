@@ -1,10 +1,9 @@
 use std::{
     io::{BufRead, BufReader, Write},
     net::{TcpListener, TcpStream},
-    sync::{Arc, Mutex}, thread::Thread
+    sync::{Arc, Mutex},
 };
 
-use futures::executor::block_on;
 use num_cpus;
 
 use crate::{
@@ -39,7 +38,7 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
                 stream, // we need to save this stream to write back the request result to it
             };
 
-            println!("{}", &request_obj.request_data);
+            // println!("{}", &request_obj.request_data);
 
             request_queue
                 .lock()

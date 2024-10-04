@@ -3,8 +3,10 @@ import time
 
 def send_test_requests():
     req = rq.get('HTTP://127.0.0.1:9700/request')
+    print(req)
     print(req.content)
     req = rq.post('HTTP://127.0.0.1:9700/request')
+    print(req)
     print(req.content)
     print()
 
