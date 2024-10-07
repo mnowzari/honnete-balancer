@@ -12,7 +12,7 @@ use crate::{
 const THREAD_SLEEP_MILLIS: u64 = 2;
 const TCP_STREAM_TIMEOUT: u64 = 60;
 
-fn test_handler(request_object: &mut Request, _host: &Host) {
+fn test_handler(request_object: &mut Request, _host: Host) {
 
     let contents: String = String::from("Request has been handled!");
     let length: usize = contents.len();
@@ -61,7 +61,7 @@ fn get_request_content(stream: TcpStream) -> Result<String, Box<dyn Error>>{
 fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error>> {
     println!("In handler()");
     // connect to farside host
-    let mut upstream_connection: Result<TcpStream, std::io::Error> = TcpStream::connect_timeout(
+    let upstream_connection: Result<TcpStream, std::io::Error> = TcpStream::connect_timeout(
         &host.hostname,
         Duration::from_secs(TCP_STREAM_TIMEOUT));
     
@@ -82,7 +82,7 @@ fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error
             request_object.stream.write_all(&content.as_bytes())?;
             println!("Wrote to nearside request stream");
         },
-        Err(x) => {},
+        Err(_x) => {},
     }
     Ok(())
 }
@@ -102,8 +102,10 @@ fn get_next_active_host(current_host_idx: &mut usize, client: &mut Client) -> Op
     Some(selected_host)
 }
 
-fn run_health_checks(client: &mut Client) {
-    for h in &mut client.hosts {
+fn run_health_checks(hosts: &mut Vec<Host>) {
+    println!("Performing health check");
+    for h in hosts {
+        // println!("{} => {}", h.hostname.port(), h.health);
         h.health_check();
     }
 }
@@ -112,9 +114,20 @@ pub fn lb_round_robin(request_queue: &Arc<Mutex<Queue>>, client: &mut Client) {
     let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
 
     let mut current_host_idx: usize = 0;
+    let mut health_check_counter: u64 = 0;
+
     loop {
+
+        health_check_counter += 1;
+        // we want to make sure we check once every 10s regardless of tickrate
+        if health_check_counter % ((1000/THREAD_SLEEP_MILLIS) * 10)  == 0 {
+            // this could be a separate short-lived thread?
+            run_health_checks(&mut client.hosts);
+        }
+
         sleep(Duration::from_millis(THREAD_SLEEP_MILLIS));
-        // get the latest request object
+
+        // get the latest request object from queue
         let request_object = request_queue
             .lock()
             .unwrap()
@@ -122,16 +135,25 @@ pub fn lb_round_robin(request_queue: &Arc<Mutex<Queue>>, client: &mut Client) {
 
         match request_object {
             Some(mut req) => {
-                // get which host to send the request to
-                let selected_host: Host =
-                    get_next_active_host(&mut current_host_idx, client).unwrap();
-
-                pool.execute(move || {
-                    let _ = handler(
-                        &mut req,
-                        selected_host
-                    );
-                });
+                
+                match get_next_active_host(&mut current_host_idx, client) {
+                    Some(h) => {
+                        pool.execute(move || {
+                            let _ = test_handler(
+                                &mut req,
+                                h
+                            );
+                        });
+                    },
+                    None => {
+                        // if selected_host comes back as None (eventually), we should
+                        // append the request we have back into the queue
+                        request_queue
+                            .lock()
+                            .unwrap()
+                            .enqueue(req);
+                    },
+                }
             },
             None => {},
         }
