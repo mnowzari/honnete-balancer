@@ -12,16 +12,6 @@ use crate::{
 const THREAD_SLEEP_MILLIS: u64 = 2;
 const TCP_STREAM_TIMEOUT: u64 = 60;
 
-fn test_handler(request_object: &mut Request, _host: Host) {
-
-    let contents: String = String::from("Request has been handled!");
-    let length: usize = contents.len();
-    let response: String =
-        format!("HTTP/1.1 200 OK\r\nContent-Length: {length}\r\n\r\n{contents}");
-
-    request_object.stream.write_all(response.as_bytes()).unwrap();
-}
-
 
 fn get_request_content(stream: TcpStream) -> Result<String, Box<dyn Error>>{
     let mut reader: BufReader<TcpStream> = BufReader::new(stream.try_clone().unwrap());
@@ -57,6 +47,16 @@ fn get_request_content(stream: TcpStream) -> Result<String, Box<dyn Error>>{
     Ok(content)
 }
 
+fn _test_handler(request_object: &mut Request, _host: Host) {
+
+    let contents: String = String::from("Request has been handled!");
+    let length: usize = contents.len();
+    let response: String =
+        format!("HTTP/1.1 200 OK\r\nContent-Length: {length}\r\n\r\n{contents}");
+
+    request_object.stream.write_all(response.as_bytes()).unwrap();
+}
+
 // TODO - let's just use an HTTP library to handle response data^
 fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error>> {
     println!("In handler()");
@@ -77,9 +77,13 @@ fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error
             // get response and content from farside stream
             let content: String = get_request_content(upstream)?;
         
-            println!("Farside content: {:?}", content);
             // write farside response to nearside stream
-            request_object.stream.write_all(&content.as_bytes())?;
+            let length: usize = content.len();
+            let response: String =
+                format!("HTTP/1.1 200 OK\r\nContent-Length: {length}\r\n\r\n{content}");
+            
+            println!("Farside content: {:?}", response);
+            request_object.stream.write_all(&response.as_bytes())?;
             println!("Wrote to nearside request stream");
         },
         Err(_x) => {},
@@ -89,21 +93,31 @@ fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error
 
 fn get_next_active_host(current_host_idx: &mut usize, client: &mut Client) -> Option<Host> {
     // println!("Getting next active host");
-    // first, update our idx counter and grab the host at this idx
+    // first, update our idx counter and then grab the host at this idx
     *current_host_idx = (*current_host_idx + 1) % client.hosts.len();
     let mut selected_host: Host = client.hosts[*current_host_idx].clone();
 
+    let max_retries: usize = client.hosts.len() * 3;
+    let mut retry_count: usize = 0;
     // if this host happens to be inactive, iterate until we find an active host
     while selected_host.health == HostHealth::Inactive {
         *current_host_idx = (*current_host_idx + 1) % client.hosts.len();
         selected_host = client.hosts[*current_host_idx].clone();
+
+        retry_count += 1;
+        if retry_count >= max_retries {
+            break;
+        }
     }
-    println!("{}", selected_host.hostname.port());
-    Some(selected_host)
+    // println!("{}", selected_host.hostname.port());
+    match selected_host.health {
+        HostHealth::Active => Some(selected_host),
+        HostHealth::Inactive => None,
+    }
 }
 
 fn run_health_checks(hosts: &mut Vec<Host>) {
-    println!("Performing health check");
+    // println!("Performing health check");
     for h in hosts {
         // println!("{} => {}", h.hostname.port(), h.health);
         h.health_check();
@@ -139,15 +153,15 @@ pub fn lb_round_robin(request_queue: &Arc<Mutex<Queue>>, client: &mut Client) {
                 match get_next_active_host(&mut current_host_idx, client) {
                     Some(h) => {
                         pool.execute(move || {
-                            let _ = test_handler(
+                            let _ = handler(
                                 &mut req,
                                 h
                             );
                         });
                     },
                     None => {
-                        // if selected_host comes back as None (eventually), we should
-                        // append the request we have back into the queue
+                        // if selected_host comes back as None, we should
+                        // append the request back into the queue
                         request_queue
                             .lock()
                             .unwrap()

@@ -14,6 +14,6 @@ def main():
     print("Sending as many requests as possible...")
     while True:
         print('Sleeping')
-        time.sleep(1)
+        #time.sleep(1)
         send_test_requests()
 main()
