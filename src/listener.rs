@@ -1,9 +1,10 @@
 use std::{
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex},
 };
 
+use http::request;
 use num_cpus;
 
 use crate::{
@@ -18,10 +19,6 @@ fn validate_request_line(request: String) -> Option<String> {
     // None
 }
 
-// Streams will stay open as long as they live in the queue
-// This makes sense because we want the stream to be alive
-// until it is taken care of and a response is written
-// back to it. The thread doesn't block, I don't think
 pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>) {
     let buf_reader: BufReader<&mut TcpStream> = BufReader::new(&mut stream);
     let request_line: String = buf_reader
@@ -33,13 +30,29 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
     match validate_request_line(request_line) {
         Some(r) => {
 
-            let contents: String = String::from("");
-            let length: usize = r.len();
-            let request_to_send: String =
-                format!("{}\r\nContent-Length: {length}\r\n\r\n{contents}", &r);
-            
-            println!("\n=== Incoming request: {}", &request_to_send);
+            // println!("\n=== Incoming RAW request: {}", &r);
 
+            let mut content_length_size: usize = 0;
+            let split_lines = r.split("\n");
+
+            for line in split_lines {
+                if line.starts_with("Content-Length") {
+                    let sizeplit = line.split(":");
+                    for s in sizeplit {
+                        if !(s.starts_with("Content-Length")) {
+                            content_length_size = s.trim().parse::<usize>().unwrap();
+                        }
+                    }
+                }
+            }
+            let buffer: Vec<u8> = vec![0; content_length_size];
+            
+            let content: String = String::from_utf8(buffer.clone()).unwrap();
+            // println!("{content}");
+            let length: usize = content_length_size;
+            let request_to_send: String =
+                format!("{}\r\nContent-Length: {length}\r\n\r\n{content}", &r);
+            
             let request_obj: Request = Request {
                 request_data: request_to_send,
                 stream, // we need to save this stream to write back the request result to it
@@ -65,12 +78,11 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
 }
 
 // ==============================================================================================================
-// not sure which 'model' to use below:
 
 // this function has a single TcpListener and kicks off
 // many enqueue_requests threads as they come into a single listener
-pub fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
-    let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
+pub fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String, num_cpu: &usize) {
+    let pool: ThreadPool = ThreadPool::new(*num_cpu / 2).unwrap();
     
     let listener: TcpListener = TcpListener::bind(format!("0.0.0.0:{}", port))
         .expect("Error initializing TcpListener");

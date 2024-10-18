@@ -37,13 +37,13 @@ impl Host {
 }
 
 
-pub struct Client {
+pub struct Hosts {
     pub hosts: Vec<Host>,
 
 }
 
-impl Client {
-    pub fn init_client(hosts: &Vec<SocketAddr>) -> Result<Client, Box<dyn Error>> {
+impl Hosts {
+    pub fn init_client(hosts: &Vec<SocketAddr>) -> Result<Hosts, Box<dyn Error>> {
         let mut host_objects: Vec<Host> = vec![];
         for host_name in hosts {
             let mut new_host_obj: Host = Host {
@@ -54,7 +54,7 @@ impl Client {
             host_objects.push(new_host_obj);
         }
 
-        Ok(Client {
+        Ok(Hosts {
                 hosts: host_objects,
             })
     }

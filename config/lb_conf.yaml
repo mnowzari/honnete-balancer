@@ -6,9 +6,14 @@ listening-port: 9700
 hosts:
   - 127.0.0.1:8000
   - 127.0.0.1:8088
-  - 127.0.0.1:7808
   - 127.0.0.1:8090
+  - 127.0.0.1:8092
+  - 127.0.0.1:8094
+  - 127.0.0.1:8096
   - 127.0.0.1:8100
+
+# number of CPUs to utilize (optional, will default to 4 if left out)
+cpu: 8
 
 # Env level for logging. Choice of test/stage/prod.
 env: test

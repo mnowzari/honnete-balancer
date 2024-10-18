@@ -1,9 +1,10 @@
 [package]
 name = "honnete"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 
 [dependencies]
+http = "1.1.0"
 futures = "0.3"
 regex = "1.10.6"
 yaml-rust = "0.4.5"

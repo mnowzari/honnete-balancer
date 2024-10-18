@@ -1,3 +1,4 @@
+use core::num;
 use std::{
     error::Error,
     fmt,
@@ -24,6 +25,7 @@ impl fmt::Display for EnvLogLevel {
 pub struct Environment {
     pub listening_port: String,
     pub hosts: Vec<SocketAddr>,
+    pub num_cpu: usize, // keep track of the total number of CPU cores we can utilize
     pub env_level: EnvLogLevel, // for logging
 }
 
@@ -31,14 +33,15 @@ impl Environment {
     pub fn init_env(path_to_conf_yaml: String) -> Result<Environment, Box<dyn Error>> {
         match read_yaml_file(path_to_conf_yaml) {
             Some(y) => {
-                let conf_details: (String, Vec<SocketAddr>, EnvLogLevel) = read_config(&y)?;
+                let conf_details: (String, Vec<SocketAddr>, usize, EnvLogLevel) = read_config(&y)?;
                 
                 print_details(&conf_details);
 
                 Ok(Environment {
                         listening_port: conf_details.0,
                         hosts: conf_details.1,
-                        env_level: conf_details.2,
+                        num_cpu: conf_details.2,
+                        env_level: conf_details.3,
                     })
             },
             None => {
@@ -49,12 +52,12 @@ impl Environment {
 }
 
 fn read_yaml_file(yaml_path: String) -> Option<String> {
-    let contents = fs::read_to_string(yaml_path)
+    let contents: String = fs::read_to_string(yaml_path)
         .expect("Error reading in the YAML file!");
     Some(contents)
 }
 
-pub fn read_config(yaml_string: &String) -> Result<(String, Vec<SocketAddr>, EnvLogLevel), Box<dyn Error>> {
+pub fn read_config(yaml_string: &String) -> Result<(String, Vec<SocketAddr>, usize, EnvLogLevel), Box<dyn Error>> {
     let yaml_obj: yaml_rust::Yaml = YamlLoader::load_from_str(yaml_string)?[0].clone();
 
     let listening_port: String = yaml_obj["listening-port"]
@@ -81,6 +84,16 @@ pub fn read_config(yaml_string: &String) -> Result<(String, Vec<SocketAddr>, Env
             .unwrap());
     }
 
+    let cpu_string_value: Option<i64> = yaml_obj["cpu"].as_i64();
+    let cpu: usize = match cpu_string_value {
+        Some(c) => {
+            c as usize
+        },
+        None => {
+            4
+        },
+    };
+
     let log_level: EnvLogLevel = match yaml_obj["env"]
         .as_str()
         .expect("\nError reading the log level!\n") {
@@ -90,14 +103,15 @@ pub fn read_config(yaml_string: &String) -> Result<(String, Vec<SocketAddr>, Env
             _ => EnvLogLevel::Test,
         };
 
-    Ok((listening_port, hosts, log_level))
+    Ok((listening_port, hosts, cpu, log_level))
 }
 
-fn print_details(env_details: &(String, Vec<SocketAddr>, EnvLogLevel)) {
+fn print_details(env_details: &(String, Vec<SocketAddr>, usize, EnvLogLevel)) {
     println!(
-        "Listening on port {}\nHosts to balance {:?}\nEnvironment level: {}",
+        "Listening on port {}\nHosts to balance {:?}\nNumber of CPUs: {}\nEnvironment level: {}",
         env_details.0,
         env_details.1,
         env_details.2,
+        env_details.3,
     );
 }
