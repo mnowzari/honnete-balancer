@@ -1,4 +1,3 @@
-use core::num;
 use std::{
     error::Error,
     fmt,
@@ -87,7 +86,12 @@ pub fn read_config(yaml_string: &String) -> Result<(String, Vec<SocketAddr>, usi
     let cpu_string_value: Option<i64> = yaml_obj["cpu"].as_i64();
     let cpu: usize = match cpu_string_value {
         Some(c) => {
-            c as usize
+            if c > 4 {
+                c as usize
+            } else {
+                println!("\nWARNING! CPU value provided in config is smaller than 4. Defaulting to 4 CPUs\n");
+                4
+            }
         },
         None => {
             4

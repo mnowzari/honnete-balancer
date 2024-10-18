@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    host::{Hosts, Host, HostHealth}, env::Environment, queue::{Queue, Request}, threadpool::ThreadPool
+    host::{Hosts, Host, HostHealth}, queue::{Queue, Request}, threadpool::ThreadPool
 };
 
 const THREAD_SLEEP_MILLIS: u64 = 2;
@@ -157,10 +157,10 @@ pub fn lb_round_robin(request_queue: &Arc<Mutex<Queue>>, client: &mut Hosts, num
                 
                 match get_next_active_host(&mut current_host_idx, client) {
                     Some(h) => {
-                        // let len_of_q: usize = request_queue.lock().unwrap().len();
-                        // if len_of_q > 0 {
-                        //     println!("{}", len_of_q);
-                        // }
+                        let len_of_q: usize = request_queue.lock().unwrap().len();
+                        if len_of_q > 0 {
+                            println!("{}", len_of_q);
+                        }
                         pool.execute(move || {
                             let _ = handler(
                                 &mut req,

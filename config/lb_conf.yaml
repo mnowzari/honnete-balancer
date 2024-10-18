@@ -12,7 +12,7 @@ hosts:
   - 127.0.0.1:8096
   - 127.0.0.1:8100
 
-# number of CPUs to utilize (optional, will default to 4 if left out)
+# number of CPUs to utilize (optional, honnete will default to 4 CPUs if this is not provided)
 cpu: 8
 
 # Env level for logging. Choice of test/stage/prod.

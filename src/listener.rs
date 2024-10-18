@@ -1,11 +1,8 @@
 use std::{
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Write},
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex},
 };
-
-use http::request;
-use num_cpus;
 
 use crate::{
     queue::{Queue, Request},
