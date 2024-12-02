@@ -65,9 +65,8 @@ fn _test_handler(request_object: &mut Request, _host: Host) {
     request_object.stream.write_all(response.as_bytes()).unwrap();
 }
 
-// TODO - let's just use an HTTP library to handle response data^
 fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error>> {
-    // connect to farside host
+    // connect to upstream host
     let upstream_connection: Result<TcpStream, std::io::Error> = TcpStream::connect_timeout(
         &host.hostname,
         Duration::from_secs(TCP_STREAM_TIMEOUT));
@@ -77,18 +76,16 @@ fn handler(request_object: &mut Request, host: Host) -> Result<(), Box<dyn Error
             // write request
             upstream.write_all(&request_object.request_data.as_bytes())?;
         
-            // get response code and content from farside stream
+            // get response code and content from upsteam
             let response_content: Vec<String> = get_request_content(&upstream)?;
             let code: &String = &response_content[0];
             let content: &String = &response_content[1];
 
-            // write farside response to nearside stream
+            // write upstream response to downstream
             let length: usize = content.len();
             let response: String =
                 format!("{code}\r\nContent-Length: {length}\r\n\r\n{content}");
-            
-            // println!("Incoming farside content: {:?}", response);
-
+            // println!("Incoming upstream content: {:?}", response);
             request_object.stream.write_all(&response.as_bytes())?;
         },
         Err(_x) => {},
@@ -123,7 +120,6 @@ fn get_next_active_host(current_host_idx: &mut usize, hosts_instance: &mut Hosts
 
 fn run_health_checks(hosts: &mut Vec<Host>) {
     for h in hosts {
-        // println!("{} => {}", h.hostname.port(), h.health);
         h.health_check();
     }
 }
@@ -138,7 +134,8 @@ pub fn lb_round_robin(request_queue: &Arc<Mutex<Queue>>, client: &mut Hosts, num
 
         health_check_counter += 1;
         // we want to make sure we check once every 10s regardless of tickrate
-        if health_check_counter % ((1000/THREAD_SLEEP_MILLIS) * 10)  == 0 {
+        let check_freq_s: u64 = 10;
+        if health_check_counter % ((1000/THREAD_SLEEP_MILLIS) * check_freq_s)  == 0 {
             // this could be a separate short-lived thread?
             run_health_checks(&mut client.hosts);
             health_check_counter = 0;
@@ -157,10 +154,6 @@ pub fn lb_round_robin(request_queue: &Arc<Mutex<Queue>>, client: &mut Hosts, num
                 
                 match get_next_active_host(&mut current_host_idx, client) {
                     Some(h) => {
-                        let len_of_q: usize = request_queue.lock().unwrap().len();
-                        if len_of_q > 0 {
-                            println!("{}", len_of_q);
-                        }
                         pool.execute(move || {
                             let _ = handler(
                                 &mut req,

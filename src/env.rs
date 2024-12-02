@@ -1,8 +1,5 @@
 use std::{
-    error::Error,
-    fmt,
-    fs,
-    net::{SocketAddr, ToSocketAddrs},
+    env, error::Error, fmt, fs, net::{SocketAddr, ToSocketAddrs}
 };
 
 use yaml_rust::YamlLoader;
@@ -26,6 +23,7 @@ pub struct Environment {
     pub hosts: Vec<SocketAddr>,
     pub num_cpu: usize, // keep track of the total number of CPU cores we can utilize
     pub env_level: EnvLogLevel, // for logging
+    pub os: String,
 }
 
 impl Environment {
@@ -41,6 +39,7 @@ impl Environment {
                         hosts: conf_details.1,
                         num_cpu: conf_details.2,
                         env_level: conf_details.3,
+                        os: env::consts::OS.to_string(),
                     })
             },
             None => {
