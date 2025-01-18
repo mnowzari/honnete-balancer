@@ -24,6 +24,11 @@ pub struct Environment {
     pub num_cpu: usize, // keep track of the total number of CPU cores we can utilize
     pub env_level: EnvLogLevel, // for logging
     pub os: String,
+    // Elastic config settings
+    pub dump_to_elastic: bool,
+    pub elastic_endpoint: Option<String>,
+    pub elastic_api_key: Option<String>,
+    pub elastic_index_name: Option<String>,
 }
 
 impl Environment {
@@ -40,6 +45,11 @@ impl Environment {
                         num_cpu: conf_details.2,
                         env_level: conf_details.3,
                         os: env::consts::OS.to_string(),
+                        // es configs
+                        dump_to_elastic: false,
+                        elastic_endpoint: Some(String::new()),
+                        elastic_api_key: Some(String::new()),
+                        elastic_index_name: Some(String::new()),
                     })
             },
             None => {

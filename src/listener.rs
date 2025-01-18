@@ -52,7 +52,7 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
             
             let request_obj: Request = Request {
                 request_data: request_to_send,
-                stream, // we need to save this stream to write back the request result to it
+                stream, // save this stream to write back the request result to it
             };
 
             request_queue
@@ -74,8 +74,6 @@ pub fn enqueue_requests(mut stream: TcpStream, request_queue: Arc<Mutex<Queue>>)
     }
 }
 
-// ==============================================================================================================
-
 // this function has a single TcpListener and kicks off
 // many enqueue_requests threads as they come into a single listener
 pub fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String, num_cpu: &usize) {
@@ -91,27 +89,3 @@ pub fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String, num_cpu:
         });
     }
 }
-
-// these two functions work by kicking off multiple TcpListener threads
-// so each thread has its own TcpListener on the specific port that will
-// have its own enqueue_requests() function:
-
-// fn listener(request_queue: Arc<Mutex<Queue>>, port: String) {
-//     let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", port))
-//         .expect("Error initializing TcpListener!");
-
-//     for stream in listener.incoming() {
-//         enqueue_requests(stream.unwrap(), request_queue.clone());
-//     }
-// }
-
-// pub async fn init_listeners(request_queue: &Arc<Mutex<Queue>>, port: &String) {
-//     let pool: ThreadPool = ThreadPool::new(num_cpus::get()/2).unwrap();
-
-//     let rq_arc_ref: Arc<Mutex<Queue>> = request_queue.clone();
-//     let port_number: String = port.clone();
-
-//     pool.execute(move || {
-//         listener(rq_arc_ref, port_number);
-//     });
-// }
